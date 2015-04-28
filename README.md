@@ -33,7 +33,7 @@ local Class = require 'dmc_lua.lua_class'
 
 --== Create a class
 
-local AccountClass = Class.newClass()
+local AccountClass = newClass()
 
 
 --== Class Properties
