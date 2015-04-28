@@ -1,7 +1,7 @@
 --====================================================================--
--- spec/lua_objects_spec.lua
+-- spec/lua_class_spec.lua
 --
--- Testing for lua-objects using Busted
+-- Testing for lua-class using Busted
 --====================================================================--
 
 
@@ -9,7 +9,7 @@ package.path = './dmc_lua/?.lua;' .. package.path
 
 
 --====================================================================--
---== Test: Lua Objects
+--== Test: Lua Class
 --====================================================================--
 
 
@@ -23,7 +23,7 @@ local VERSION = "0.2.1"
 --== Imports
 
 
-local Objects = require 'lua_objects'
+local LuaClass = require 'lua_class'
 
 
 
@@ -32,8 +32,8 @@ local Objects = require 'lua_objects'
 
 
 -- setup some aliases to make code cleaner
-local Class = Objects.Class
-local Object = Objects.Object
+local Class = LuaClass.Class
+local Object = LuaClass.Object
 
 
 
@@ -43,9 +43,9 @@ local Object = Objects.Object
 
 
 --[[
-Test methods and such on items inside of Lua Objects
+Test methods and such on items inside of Lua Class
 --]]
-describe( "Module Test: test Lua Object availability", function()
+describe( "Module Test: test Lua Class availability", function()
 
 	it( "has Class name", function()
 		assert( Class.NAME == "Class Class" )
@@ -61,7 +61,7 @@ describe( "Module Test: test Lua Object availability", function()
 	end)
 
 	it( "has newClass access", function()
-		assert( Objects.newClass == _G.newClass, "mismatch of newClass() functions" )
+		assert( LuaClass.newClass == _G.newClass, "mismatch of newClass() functions" )
 	end)
 
 end)
