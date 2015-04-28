@@ -2,7 +2,7 @@
 
 Advanced object oriented module for Lua (OOP)
 
-This single-file module started its life as [dmc-objects](https://github.com/dmccuskey/dmc-objects) and was used to create mobile apps built with the Corona SDK. It was later refactored into two files `lua_objects.lua` & `dmc_objects.lua` so that pure-Lua environments could benefit, too (eg, [lua-corovel](https://github.com/dmccuskey/lua-corovel)).
+This single-file module started its life as [dmc-objects](https://github.com/dmccuskey/dmc-objects) and was used to create mobile apps built with the Corona SDK. It was later refactored into three files `lua_class`, `lua_objects.lua` & `dmc_objects.lua` so that pure-Lua environments could benefit, too (eg, [lua-corovel](https://github.com/dmccuskey/lua-corovel)).
 
 This power-duo have been used to create relatively complex Lua mobile apps (~60k LOC), clients for websockets and the WAMP-protocol, and countless others.
 
@@ -28,13 +28,13 @@ Here's a quick example showing how to create a custom class.
 ```lua
 --== Import module
 
-local Objects = require 'dmc_lua.lua_objects'
+local Class = require 'dmc_lua.lua_class'
 
 
 --== Create a class
 
-local AccountClass = newClass()
- 
+local AccountClass = Class.newClass()
+
 
 --== Class Properties
 
@@ -47,14 +47,14 @@ AccountClass.DEFAULT_AMOUNT = 100.45
 -- called from obj:new()
 function AccountClass:__new__( params )
 	params = params or {}
-	self._secure = params.secure or true 
-	self._amount = params.amount or self.DEFAULT_AMOUNT 
+	self._secure = params.secure or true
+	self._amount = params.amount or self.DEFAULT_AMOUNT
 end
 
 -- called from obj:destroy()
 function AccountClass:__destroy__()
-	self._secure = nil 
-	self._amount = nil 
+	self._secure = nil
+	self._amount = nil
 end
 
 
@@ -104,12 +104,12 @@ obj:optimize()
 obj:deoptimize()
 
 
--- Check class/object types 
+-- Check class/object types
 
 assert( AccountClass.is_class == true ), "AccountClass is a class" )
 assert( AccountClass.is_instance == false ), "AccountClass is not an instance" )
 
-assert( obj.is_class == false, "an object instance is not a class" ) 
+assert( obj.is_class == false, "an object instance is not a class" )
 assert( obj.is_instance == true, "an objects is an instance of a class" )
 assert( obj:isa( AccountClass ) == true, "this obj is an instance of AccountClass" )
 
@@ -117,13 +117,13 @@ assert( obj:isa( AccountClass ) == true, "this obj is an instance of AccountClas
 -- Destroy instance
 
 account:destroy()
-account = nil 
+account = nil
 
 ```
 
 #### More, Advanced Examples ####
 
-The project [dmc-objects](https://github.com/dmccuskey/dmc-objects) contains two `lua-objects` sub-classes made for mobile development (`ObjectBase` & `ComponentBase`). These sub-classes show how to get more out of `lua_objects`, such as:
+The projects [lua-objects](https://github.com/dmccuskey/lua-objects)  and [dmc-objects](https://github.com/dmccuskey/dmc-objects) contain sub-classes made for mobile development (`ObjectBase` & `ComponentBase`). These sub-classes show how to get more out of `lua_class`, such as:
 
 * custom initialization and teardown
 * custom constructor/destructor names
