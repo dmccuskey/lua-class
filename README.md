@@ -1,149 +1,143 @@
-## lua-objects ##
+# lua-class
 
-Advanced object oriented module for Lua (OOP)
+Classes for Lua 5.1: inheritance from one or several classes, getters and setters, and calls to any parent's version of a method.
 
-This single-file module started its life as [dmc-objects](https://github.com/dmccuskey/dmc-objects) and was used to create mobile apps built with the Corona SDK. It was later refactored into three files `lua_class`, `lua_objects.lua` & `dmc_objects.lua` so that pure-Lua environments could benefit, too (eg, [lua-corovel](https://github.com/dmccuskey/lua-corovel)).
-
-This power-duo have been used to create relatively complex Lua mobile apps (~60k LOC), clients for websockets and the WAMP-protocol, and countless others.
-
-
-### Features ###
-
-* **_new!_** customizable methods and names for constructor/destructor
-* **_new!_** multiple inheritance (all way to top level)
-* **_new!_** handles ambiguities of inherited attributes
-* **_new!_** advanced support for mixins
-* getters and setters
-* correctly handles missing methods on super classes
-* optimization (copy methods from super classes)
-* **_new!_** unit tested
-
-
-### Examples ###
-
-#### A Simple Custom Class ####
-
-Here's a quick example showing how to create a custom class.
+It is the class model under [lua-objects](https://github.com/dmccuskey/lua-objects) (plain Lua) and [dmc-objects](https://github.com/dmccuskey/dmc-objects) (Solar2D, formerly Corona SDK). A class is a table, and so is an instance:
 
 ```lua
---== Import module
+local Class = require 'lua_class'
 
-local Class = require 'dmc_lua.lua_class'
+local Account = Class.newClass( nil, { name="Account" } )
 
-
---== Create a class
-
-local AccountClass = newClass()
-
-
---== Class Properties
-
-AccountClass.DEFAULT_PATH = '/path/dir/'
-AccountClass.DEFAULT_AMOUNT = 100.45
-
-
---== Class constructor/destructor
-
--- called from obj:new()
-function AccountClass:__new__( params )
+function Account:__new__( params )
 	params = params or {}
-	self._secure = params.secure or true
-	self._amount = params.amount or self.DEFAULT_AMOUNT
+	self._balance = params.balance or 0
 end
 
--- called from obj:destroy()
-function AccountClass:__destroy__()
-	self._secure = nil
-	self._amount = nil
+function Account.__getters:balance()
+	return self._balance
 end
 
-
---== Class getters/setters
-
-function AccountClass.__setters:secure( value )
-	assert( type(value)=='boolean', "property 'secure' must be boolean" )
-	self._secure = value
-end
-function AccountClass.__getters:secure()
-	return self._secure
-end
-
-
---== Class methods
-
-function AccountClass:deposit( amount )
-	self._amount = self._amount + amount
-	self:dispatchEvent( AccountClass.AMOUNT_CHANGED_EVENT, { amount=self._amount } )
-end
-function AccountClass:withdraw( amount )
-	self._amount = self._amount - amount
-end
-
+local account = Account:new{ balance=100 }
+print( account.balance )  --> 100
 ```
 
+## Features
 
-#### Create Class Instance ####
+- `newClass()` with one parent, several parents (mixins), or none
+- Getters and setters: `obj.balance` and `obj.balance = 5` can run your code
+- `superCall()` reaches the parents' version of a method, or one named parent's
+- A constructor and destructor per class (`__new__()`, `__destroy__()`), called by `new()` and `destroy()`, and other names for them if you want (`create()`, `removeSelf()`)
+- `isa()`, `is_class`, `is_instance`, `class`, `supers` and a printable class name
+- `optimize()` copies inherited methods onto an object for faster lookups
+- One file, pure Lua, no dependencies; MIT licensed
 
-And here's how to work with that class.
+## Quick Start
+
+This writes a class and a subclass and runs them, in about 5 minutes, on macOS or Linux.
+
+Prerequisites: Lua 5.1 (`lua -v` shows `Lua 5.1.x`) and git.
+
+### 1. Get the Code
+
+In an empty folder:
+
+```sh
+git clone https://github.com/dmccuskey/lua-class.git
+```
+
+The module is the one file `lua-class/dmc_lua/lua_class.lua`.
+
+### 2. Write a Class
+
+Create `main.lua` in the same folder:
 
 ```lua
+package.path = './lua-class/dmc_lua/?.lua;' .. package.path
+local Class = require 'lua_class'
 
--- Create instance
+local Account = Class.newClass( nil, { name="Account" } )
 
-local account = AccountClass:new{ secure=true, amount=94.32 }
+function Account:__new__( params )
+	params = params or {}
+	self._balance = params.balance or 0
+end
 
--- Call methods
+function Account.__getters:balance()
+	return self._balance
+end
 
-account:deposit( 32.12 )
-account:withdraw( 50.00 )
+function Account:deposit( amount )
+	self._balance = self._balance + amount
+end
 
-
--- optimize method lookup
-
-obj:optimize()
-obj:deoptimize()
-
-
--- Check class/object types
-
-assert( AccountClass.is_class == true ), "AccountClass is a class" )
-assert( AccountClass.is_instance == false ), "AccountClass is not an instance" )
-
-assert( obj.is_class == false, "an object instance is not a class" )
-assert( obj.is_instance == true, "an objects is an instance of a class" )
-assert( obj:isa( AccountClass ) == true, "this obj is an instance of AccountClass" )
-
-
--- Destroy instance
-
-account:destroy()
-account = nil
-
+local account = Account:new{ balance=100 }
+account:deposit( 25 )
+print( account, account.balance, account:isa( Account ) )
 ```
 
-#### More, Advanced Examples ####
+Run it:
 
-The projects [lua-objects](https://github.com/dmccuskey/lua-objects)  and [dmc-objects](https://github.com/dmccuskey/dmc-objects) contain sub-classes made for mobile development (`ObjectBase` & `ComponentBase`). These sub-classes show how to get more out of `lua_class`, such as:
+```sh
+lua main.lua
+```
 
-* custom initialization and teardown
-* custom constructor/destructor names
-* custom Event mixin (add/removeListener/dispatchEvent) [lua-events-mixin](https://github.com/dmccuskey/lua-events-mixin)
+```text
+Account (table: 0x600001a2c040)	125	true
+```
 
+If it shows `module 'lua_class' not found`, run it from the folder that holds `lua-class/`.
 
+**Going further:** what runs when an instance is created and destroyed ([Constructor and Destructor](docs/api.md#constructor-and-destructor)), and setters ([Getters and Setters](docs/api.md#getters-and-setters)).
 
-### Custom Constructor/Destructor ###
+### 3. Write a Subclass
 
-You can even customize the names used for construction and destruction.
+Add this to the end of `main.lua`:
 
 ```lua
--- use 'create' instead of 'new'
--- eg,  MyClass:create{ secure=true, amount=94.32 }
---
-registerCtorName( 'create' )
+local SavingsAccount = Class.newClass( Account, { name="Savings Account" } )
 
--- use 'removeSelf' instead of 'destroy'
--- eg,  obj:removeSelf()
---
-registerDtorName( 'removeSelf' )
+function SavingsAccount:__new__( params )
+	params = params or {}
+	self:superCall( '__new__', params )
+	self._rate = params.rate or 0.02
+end
 
+function SavingsAccount:deposit( amount )
+	self:superCall( 'deposit', amount )
+	print( 'deposited', amount )
+end
+
+function SavingsAccount:addInterest()
+	self:deposit( self._balance * self._rate )
+end
+
+local savings = SavingsAccount:new{ balance=200, rate=0.05 }
+savings:addInterest()
+print( savings, savings.balance, savings:isa( Account ) )
 ```
+
+`lua main.lua` now also shows:
+
+```text
+deposited	10
+Savings Account (table: 0x600001a2c6c0)	210	true
+```
+
+`SavingsAccount` has its own `__new__()` and `deposit()`, and each calls `Account`'s with `superCall()`. Without that call, `Account:__new__()` doesn't run for a savings account.
+
+**Going further:** several parents and mixins ([Multiple Inheritance](docs/api.md#multiple-inheritance)), or a base class with events and a longer setup sequence ([lua-objects](https://github.com/dmccuskey/lua-objects)).
+
+To update, pull the repository again (`git -C lua-class pull`), or replace `lua_class.lua` with the newer one.
+
+## Documentation
+
+- [API reference](docs/api.md): `newClass()`, the constructor and destructor, class members, getters and setters, `superCall()`, multiple inheritance, known issues
+- [lua-objects](https://github.com/dmccuskey/lua-objects): `ObjectBase`, a base class built on this one, with events
+- [dmc-objects](https://github.com/dmccuskey/dmc-objects): classes for Solar2D display objects, built on lua-objects
+
+Everything else is listed on the [documentation home](docs/README.md).
+
+## License
+
+lua-class is released under the [MIT License](LICENSE).
