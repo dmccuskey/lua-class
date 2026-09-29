@@ -1,6 +1,6 @@
 # lua-class
 
-Classes for Lua 5.1: inheritance from one or several classes, getters and setters, and calls to any parent's version of a method.
+Classes for Lua 5.1 and later: inheritance from one or several classes, getters and setters, and calls to any parent's version of a method.
 
 It is the class model under [lua-objects](https://github.com/dmccuskey/lua-objects) (plain Lua) and [dmc-objects](https://github.com/dmccuskey/dmc-objects) (Solar2D, formerly Corona SDK). A class is a table, and so is an instance:
 
