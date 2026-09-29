@@ -515,3 +515,197 @@ describe( "Module Test: class methods", function()
 	end)
 
 end)
+
+
+
+--[[
+Test adding and removing the global newClass()
+--]]
+describe( "Module Test: setNewClassGlobal()", function()
+
+	after_each( function()
+		LuaClass.setNewClassGlobal( true )
+	end)
+
+	it( "sets the global newClass on load", function()
+		assert.are.equal( _G.newClass, LuaClass.newClass )
+	end)
+
+	it( "removes the global with false", function()
+		LuaClass.setNewClassGlobal( false )
+		assert.is_nil( _G.newClass )
+	end)
+
+	it( "sets the global again with true or no argument", function()
+		LuaClass.setNewClassGlobal( false )
+		LuaClass.setNewClassGlobal( true )
+		assert.are.equal( _G.newClass, LuaClass.newClass )
+		LuaClass.setNewClassGlobal( false )
+		LuaClass.setNewClassGlobal()
+		assert.are.equal( _G.newClass, LuaClass.newClass )
+	end)
+
+	it( "leaves another module's newClass alone", function()
+		local other = function() end
+		LuaClass.setNewClassGlobal( false )
+		_G.newClass = other
+		LuaClass.setNewClassGlobal( true )
+		assert.are.equal( _G.newClass, other )
+		LuaClass.setNewClassGlobal( false )
+		assert.are.equal( _G.newClass, other )
+		_G.newClass = nil
+	end)
+
+end)
+
+
+
+--[[
+Test superCall() edge cases
+--]]
+describe( "Module Test: superCall() edge cases", function()
+	local ClassA, ClassB, obj
+
+	before_each( function()
+		ClassA = newClass( nil, { name="Class A" } )
+		function ClassA:pair( a, b )
+			return a, b
+		end
+		function ClassA:count( ... )
+			return select( '#', ... )
+		end
+
+		ClassB = newClass( ClassA, { name="Class B" } )
+		function ClassB:pair( a, b )
+			return self:superCall( 'pair', a, b )
+		end
+		function ClassB:count( ... )
+			return self:superCall( 'count', ... )
+		end
+
+		obj = ClassB:new()
+	end)
+
+	it( "returns nil when no class defines the method", function()
+		assert.is_nil( obj:superCall( 'missing' ) )
+		assert.are.equal( select( '#', obj:superCall( 'missing' ) ), 1 )
+		-- and leaves no state behind
+		assert.is_nil( rawget( obj, '__dmc_super' ) )
+		local a, b = obj:pair( 1, 2 )
+		assert.are.equal( a, 1 )
+		assert.are.equal( b, 2 )
+	end)
+
+	it( "returns every value of the method", function()
+		local a, b = obj:pair( 1, 2 )
+		assert.are.equal( a, 1 )
+		assert.are.equal( b, 2 )
+		local x, y = obj:pair( nil, 2 )
+		assert.is_nil( x )
+		assert.are.equal( y, 2 )
+	end)
+
+	it( "still works after a caught error in a called method", function()
+		local err = { message='boom' }
+		function ClassA:fail( x )
+			if x then error( err ) end
+			return 'A'
+		end
+		function ClassB:fail( x )
+			return self:superCall( 'fail', x )
+		end
+		local ok, e = pcall( obj.fail, obj, true )
+		assert.is_false( ok )
+		assert.are.equal( e, err ) -- the same error, unchanged
+		assert.is_nil( rawget( obj, '__dmc_super' ) )
+		assert.are.equal( obj:fail(), 'A' )
+	end)
+
+	it( "passes every argument, nil included", function()
+		assert.are.equal( obj:count( 1, nil, 3, nil ), 4 )
+		assert.are.equal( obj:count(), 0 )
+	end)
+
+end)
+
+
+
+--[[
+Test that the module leaves no globals except newClass
+--]]
+describe( "Module Test: globals", function()
+
+	it( "doesn't set _extend or _optimize", function()
+		local ClassA = newClass( nil, { name="Class A" } )
+		local obj = ClassA:new()
+		obj:optimize()
+		assert.is_nil( rawget( _G, '_extend' ) )
+		assert.is_nil( rawget( _G, '_optimize' ) )
+	end)
+
+end)
+
+
+
+--[[
+Test getters and setters, including ones added to a parent later
+--]]
+describe( "Module Test: getters and setters", function()
+	local ClassA, ClassB, ClassC, obj
+
+	before_each( function()
+		ClassA = newClass( nil, { name="Class A" } )
+		function ClassA.__getters:one() return 'A1:' .. tostring( self ) end
+		function ClassA.__setters:one( v ) rawset( self, '_one', 'A:' .. v ) end
+
+		ClassB = newClass( nil, { name="Class B" } )
+		function ClassB.__getters:one() return 'B1' end
+		function ClassB.__getters:two() return 'B2' end
+
+		ClassC = newClass( { ClassA, ClassB }, { name="Class C" } )
+		obj = ClassC:new()
+	end)
+
+	it( "finds a parent's getters and setters, the first parent first", function()
+		assert.are.equal( obj.one, 'A1:' .. tostring( obj ) )
+		assert.are.equal( obj.two, 'B2' )
+		obj.one = 'x'
+		assert.are.equal( rawget( obj, '_one' ), 'A:x' )
+	end)
+
+	it( "finds getters and setters added to a parent later", function()
+		function ClassA.__getters:three() return self end
+		function ClassA.__setters:three( v ) rawset( self, '_three', v ) end
+		assert.are.equal( obj.three, obj )
+		obj.three = 3
+		assert.are.equal( rawget( obj, '_three' ), 3 )
+		assert.is_nil( rawget( obj, 'three' ) )
+	end)
+
+	it( "lets a subclass override a getter", function()
+		function ClassC.__getters:two() return 'C2' end
+		assert.are.equal( obj.two, 'C2' )
+		assert.are.equal( ClassB:new().two, 'B2' )
+	end)
+
+end)
+
+
+
+--[[
+Test constructor arguments
+--]]
+describe( "Module Test: constructor arguments", function()
+
+	it( "passes every argument, nil included", function()
+		local ClassA = newClass( nil, { name="Class A" } )
+		function ClassA:__new__( ... )
+			self.count = select( '#', ... )
+			self.last = select( self.count, ... )
+		end
+		local obj = ClassA:new( 'x', nil )
+		assert.are.equal( obj.count, 2 )
+		assert.is_nil( obj.last )
+	end)
+
+end)

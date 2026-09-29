@@ -1,6 +1,6 @@
 # API Reference
 
-Everything lua-class provides, as of version 0.1.0. The [Quick Start](../README.md#quick-start) shows the pieces used together.
+Everything lua-class provides, as of version 0.2.0. The [Quick Start](../README.md#quick-start) shows the pieces used together.
 
 | name | what it is |
 |---|---|
@@ -29,12 +29,12 @@ local Class = require 'lua_class'
 | `Class.Class` | the root class every class inherits from; its `NAME` is `Class Class` |
 | `Class.registerCtorName( name, class )`, `Class.registerDtorName( name, class )` | see [Other Names](#other-names-for-new-and-destroy) |
 | `Class.inheritsFrom( parent, params )` | the old way to create a class; same as `newClass( parent, params )` |
-| `Class.setNewClassGlobal()` | sets the global `newClass`, see below |
-| `Class.__version` | `"0.1.0"` |
+| `Class.setNewClassGlobal( [ flag ] )` | sets the global `newClass` (`true` or no argument) or removes it (`false`), see below |
+| `Class.__version` | `"0.2.0"` |
 
-Loading the module also sets the global `newClass`. If a global `newClass` already exists, it prints `WARNING: newClass exists in global namespace` and leaves it; use `Class.newClass` in that case. That happens when the file is loaded twice under two module names.
+Loading the module also sets the global `newClass`; `Class.setNewClassGlobal( false )` removes it if you'd rather not have it. If a global `newClass` from elsewhere already exists, both print `WARNING: newClass exists in global namespace` and leave it; use `Class.newClass` in that case. That happens when the file is loaded twice under two module names.
 
-The code is written for Lua 5.1, the version Solar2D uses: it calls the global `unpack()`, which Lua 5.2 moved to `table.unpack`.
+It runs under Lua 5.1, the version Solar2D uses, and later versions (the tests pass under 5.1 and 5.4).
 
 ## newClass
 
@@ -98,7 +98,7 @@ Every class and instance has these.
 
 `print( obj )` shows the name and the table address: `Savings Account (table: 0x600001a2c6c0)`.
 
-A name lookup on an object checks, in order: the object's own fields, its getters, then its parents (each parent's own fields, getters and parents, before the next parent).
+A name lookup on an object checks, in order: the object's own fields, the getters (the object's own, then its parents', each parent and its parents before the next parent), then its parents' fields in the same order. A getter anywhere above therefore wins over a method of the same name.
 
 ## Getters and Setters
 
@@ -117,7 +117,7 @@ account.balance = 50      -- calls the setter
 ```
 
 - Store the value under another name (`_balance`). Getters and setters only run while the object has no field of their name: once `obj.balance` is a field, reading it returns the field and assigning to it replaces the field. A property with a getter and no setter therefore stops using the getter after `obj.balance = 50`.
-- Subclasses and instances get a copy of their parents' getters and setters when they are created. Define them before creating subclasses or instances (see [Known Issues](#known-issues)).
+- Subclasses and instances find their parents' getters and setters when they are used, so ones added to a parent later work too. A getter always runs with the object as `self`.
 - With several parents, the first parent's getter or setter wins.
 
 ## superCall
@@ -131,7 +131,7 @@ self:superCall( Parent, 'method', ... )
 
 With a parent as the first argument, only that parent and its own parents are searched. Use it to call a particular parent's version when there are several ([Multiple Inheritance](#multiple-inheritance)).
 
-It returns the method's first return value only. If no parent has the method, it calls nothing and returns `nil`, but if no class defines `method` at all it raises an error (see [Known Issues](#known-issues)).
+It passes every argument, `nil`s included, and returns every value the method returns. If no parent has the method, or no class defines it at all, it calls nothing and returns `nil`. An error in the called method is passed on unchanged, but its traceback starts at `superCall()`.
 
 ## Multiple Inheritance
 
@@ -153,7 +153,7 @@ local checking = Checking:new{ balance=10 }
 print( checking:describe() )  --> I am Checking
 ```
 
-- Parents are searched in the order listed, each one fully (its fields, getters and parents) before the next.
+- Parents are searched in the order listed, each one and its parents before the next: first for a getter, then for a field or method.
 - A parent can be a class or a plain table of functions (a mixin, like `Printable` here). [lua-objects](https://github.com/dmccuskey/lua-objects)' `ObjectBase` is built this way, from the root class and the events mixin from [lua-events-mixin](https://github.com/dmccuskey/lua-events-mixin).
 - An instance runs one `__new__()`, the nearest. Call each parent's that you need with `superCall( Parent, '__new__', ... )`, as above. A mixin usually has a setup function of its own for this (lua-events-mixin's is `__init__()`).
 - `isa()` checks every parent that is a class; a plain-table parent isn't one, so `checking:isa( Printable )` is `false`.
@@ -175,8 +175,4 @@ Adds another name for the constructor or destructor on `class` (default: the roo
 
 ## Known Issues
 
-- **Getters and setters added to a parent after a subclass or instance exists** aren't copied to it: such a setter never runs, and such a getter runs with the parent class as `self`, not the object.
-- **`superCall( 'method' )` raises an error when no class defines `method`** (`attempt to index local 'c' (a nil value)`), instead of returning `nil`.
-- `superCall()` returns only the first of the method's return values.
-- `Class.setNewClassGlobal( false )` doesn't remove the global `newClass`: it prints the warning above and leaves it.
-- The module sets the globals `_extend` (when a class or instance is created) and `_optimize` (on the first `optimize()`).
+None known.
